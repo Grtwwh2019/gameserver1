@@ -78,15 +78,8 @@ public class SocketPacketHandler extends ChannelInboundHandlerAdapter implements
         SocketPacket socketPacket = (SocketPacket) msg;
         int packetId = socketPacket.getPacketId();
         byte[] data = socketPacket.getData();
-        Object parser = packetId2Parser.get(packetId);
-        if (parser == null) {
-            LOGGER.error(String.format("不存在packetId=[%s]的协议解析器", packetId));
-            return;
-        }
-        // 解析proto类
-        Object proto = parseProto(parser, data);
-        // proto转换为 xxxReq pojo
-        Object protocol = transferProto2Pojo(packetId, proto);
+        // 数据解码
+        Object protocol = decodeProto(packetId, data);
         if (protocol == null) {
             return;
         }
@@ -109,6 +102,25 @@ public class SocketPacketHandler extends ChannelInboundHandlerAdapter implements
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
+    }
+
+    /**
+     * protobuf进行解码
+     *
+     * @param packetId
+     * @param data     protobuf编码数据
+     * @return 解码后的pojo对象
+     */
+    private Object decodeProto(int packetId, byte[] data) {
+        Object parser = packetId2Parser.get(packetId);
+        if (parser == null) {
+            LOGGER.error(String.format("不存在packetId=[%s]的协议解析器", packetId));
+            return null;
+        }
+        // 解析proto类
+        Object proto = parseProto(parser, data);
+        // proto转换为 xxxReq pojo
+        return transferProto2Pojo(packetId, proto);
     }
 
     /**
@@ -153,27 +165,4 @@ public class SocketPacketHandler extends ChannelInboundHandlerAdapter implements
         return null;
     }
 
-
-    private static class ParserWrapper {
-        private Method parser;
-
-        private Object builder;
-
-        public static ParserWrapper valueOf(Method parser, Object builder) {
-            ParserWrapper parserWrapper = new ParserWrapper();
-            parserWrapper.parser = parser;
-            parserWrapper.builder = builder;
-            return parserWrapper;
-        }
-
-        public Object invoke() {
-            try {
-                return parser.invoke(builder);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
-                return null;
-            }
-        }
-
-    }
 }
