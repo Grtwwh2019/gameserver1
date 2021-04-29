@@ -11,9 +11,9 @@ http://www.springframework.org/schema/tx http://www.springframework.org/schema/t
 
 
     <!--bean扫描-->
-    <context:component-scan base-package="com.grtwwh">
+    <context:component-scan base-package="com.grtwwh.gameserver">
         <!--扫描注册注解为SocketProtocol的类-->
-        <context:include-filter type="annotation" expression="com.grtwwh.base.socket.anno.SocketProtocol"/>
+        <context:include-filter type="annotation" expression="com.grtwwh.gameserver.base.socket.anno.SocketProtocol"/>
     </context:component-scan>
 
 
