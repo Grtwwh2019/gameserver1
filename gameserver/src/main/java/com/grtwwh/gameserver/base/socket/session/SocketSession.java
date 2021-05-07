@@ -1,6 +1,8 @@
 package com.grtwwh.gameserver.base.socket.session;
 
+import com.grtwwh.gameserver.base.socket.handler.SocketPacketHandler;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.util.AttributeKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +62,10 @@ public class SocketSession {
         this.channel.attr(MAIN).set(main);
     }
 
+    public void unBindMain() {
+        this.channel.attr(MAIN).set(null);
+    }
+
     public int getDispatcherCode() {
         return dispatcherCode;
     }
@@ -71,4 +77,29 @@ public class SocketSession {
     public SocketAddress getSocketAddress() {
         return socketAddress;
     }
+
+    public Channel getChannel() {
+        return channel;
+    }
+
+    /**
+     * 业务消息推送
+     *
+     * @param packet
+     */
+    public ChannelFuture sendPacket(Object packet) {
+        return sendPacket(packet, false);
+    }
+
+    /**
+     * 消息推送
+     *
+     * @param packet
+     * @param flushNow 是否立刻推送，不允许有延迟
+     * @return
+     */
+    public ChannelFuture sendPacket(Object packet, boolean flushNow) {
+        return SocketPacketHandler.getInstance().sendPacket(channel, packet, flushNow);
+    }
+
 }

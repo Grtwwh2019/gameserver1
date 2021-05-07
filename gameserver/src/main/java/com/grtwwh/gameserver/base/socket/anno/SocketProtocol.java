@@ -24,6 +24,10 @@ public @interface SocketProtocol {
      */
     int packetId() default 0;
 
+    /**
+     * protobuf编译后的java类
+     * @return
+     */
     Class protoClass();
 
 }
