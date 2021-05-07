@@ -11,7 +11,6 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.HashedWheelTimer;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -182,12 +181,8 @@ public class SocketPacketHandler extends ChannelInboundHandlerAdapter implements
         Type actualTypeArgument = genericSuperclass.getActualTypeArguments()[0];
         Class<?> protoClass = Class.forName(actualTypeArgument.getTypeName());
         Object builder = protoClass.getDeclaredMethod("newBuilder").invoke(null);
-        for (Field declaredField : builder.getClass().getDeclaredFields()) {
-            declaredField.setAccessible(true);
-            String fileName = StringUtils.left(declaredField.getName(), declaredField.getName().length() - 1);
-            Field protocolField = protocol.getClass().getDeclaredField(fileName);
-            protocolField.setAccessible(true);
-            declaredField.set(builder, protocolField.get(protocol));
+        for (Field protocolField : protocol.getClass().getDeclaredFields()) {
+            resolveEncodeFields(protocolField, protocol, builder);
         }
         Object proto = builder.getClass().getDeclaredMethod("build").invoke(builder);
         return (byte[]) proto.getClass().getMethod("toByteArray").invoke(proto);
@@ -204,7 +199,7 @@ public class SocketPacketHandler extends ChannelInboundHandlerAdapter implements
         Object protocol = packetId2Protocol.get(packetId);
         try {
             for (Field field : protocol.getClass().getDeclaredFields()) {
-                resolveFields(field, proto, protocol);
+                resolveDecodeFields(field, proto, protocol);
             }
             return protocol;
         } catch (Exception e) {
@@ -221,7 +216,7 @@ public class SocketPacketHandler extends ChannelInboundHandlerAdapter implements
      * @param protocol
      * @throws Exception
      */
-    private void resolveFields(Field protocolField, Object proto, Object protocol) throws Exception {
+    private void resolveDecodeFields(Field protocolField, Object proto, Object protocol) throws Exception {
         String fieldName = protocolField.getName() + "_";
         Field protoField = proto.getClass().getDeclaredField(fieldName);
         protoField.setAccessible(true);
@@ -235,9 +230,44 @@ public class SocketPacketHandler extends ChannelInboundHandlerAdapter implements
             Field[] declaredFields = protocolField.getType().getDeclaredFields();
             Object o = protocolField.getType().newInstance();
             for (Field field : declaredFields) {
-                resolveFields(field, value, o);
+                resolveDecodeFields(field, value, o);
             }
             protocolField.set(protocol, o);
+        }
+    }
+
+    /**
+     * 编码解析字段
+     *
+     * @param protocolField pojo.field
+     * @param protocol      pojo
+     * @param builder       protobuf.newBuilder()
+     * @throws Exception
+     */
+    private void resolveEncodeFields(Field protocolField, Object protocol, Object builder) throws Exception {
+        protocolField.setAccessible(true);
+        Object value = protocolField.get(protocol);
+        String fieldName = protocolField.getName() + "_";
+        Field protoField = builder.getClass().getDeclaredField(fieldName);
+        if (protocolField.getType().isPrimitive()
+                || protocolField.getType().isEnum()
+                || protocolField.getType().equals(String.class)) {
+            protoField.setAccessible(true);
+            protoField.set(builder, value);
+        } else {
+            // protocolField = address
+            // protocol = address
+            // builder = address.newBuilder()
+            Object newBuilder = protoField.getType().getDeclaredMethod("newBuilder").invoke(null);
+            Field[] declaredFields = protocolField.getType().getDeclaredFields();
+            for (Field declaredField : declaredFields) {
+                // declaredField = nodeId
+                resolveEncodeFields(declaredField, value, newBuilder);
+            }
+            // builder.build()
+            Object protoValue = newBuilder.getClass().getDeclaredMethod("build").invoke(newBuilder);
+            protoField.setAccessible(true);
+            protoField.set(builder, protoValue);
         }
     }
 
