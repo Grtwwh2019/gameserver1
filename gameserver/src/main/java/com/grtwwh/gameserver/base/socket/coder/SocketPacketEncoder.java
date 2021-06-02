@@ -21,7 +21,7 @@ public class SocketPacketEncoder extends MessageToByteEncoder {
         }
         SocketPacket socketPacket = (SocketPacket) msg;
         out.writeInt(socketPacket.getPacketId());
-        out.writeByte(socketPacket.getData().length);
+        out.writeInt(socketPacket.getData().length);
         out.writeBytes(socketPacket.getData());
     }
 

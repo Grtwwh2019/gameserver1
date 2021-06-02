@@ -19,7 +19,7 @@ public interface IEventBus {
     /**
      * 通知观察者事件发生
      */
-    void submitSync(Class eventClass, Object... args);
+    void submitSync(Class eventClass, IEventCallback eventCallback, Object... args);
 
-    void submit(Class eventClass, int dispatcherCode, Object... args);
+    void submit(Class eventClass, IEventCallback eventCallback, int dispatcherCode, Object... args);
 }

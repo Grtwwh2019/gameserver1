@@ -3,6 +3,8 @@ package com.grtwwh.gameserver.base.event;
 import java.lang.reflect.Method;
 
 /**
+ * 方法调用包装
+ *
  * @author Grtwwh2019
  * @version 1.0
  * @since 2021/4/26 18:09
@@ -26,18 +28,21 @@ public class MethodInvokeWrapper {
         return methodInvokeWrapper;
     }
 
-    public void invoke(Object[] argVals) throws Exception {
+    public Object invoke(Object[] argVals) throws Exception {
         Object[] args = selectArgs(argVals);
         int argsSize = checkSize(args);
         if (argsSize != argTypes.length) {
-            throw new IllegalArgumentException(String.format("触发事件实际参数数量出错，实际参数数量为：[%s]，所需参数数量为：[%s]", argsSize, argTypes.length));
+            throw new IllegalArgumentException(String.format("触发事件实际参数数量出错，method=[%s],实际参数数量为：[%s]，所需参数数量为：[%s]", method.getName(), argsSize, argTypes.length));
         }
-        method.invoke(obj, args);
+        return method.invoke(obj, args);
     }
 
     private Object[] selectArgs(Object[] argVals) {
         Object[] args = new Object[argTypes.length];
         for (Object argVal : argVals) {
+            if (argVal == null) {
+                continue;
+            }
             for (int i = 0; i < argTypes.length; i++) {
                 Class argType = argTypes[i];
                 if (argVal.getClass().isAssignableFrom(argType)) {

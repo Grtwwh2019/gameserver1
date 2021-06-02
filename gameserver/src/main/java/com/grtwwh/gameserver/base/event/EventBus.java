@@ -2,6 +2,7 @@ package com.grtwwh.gameserver.base.event;
 
 import com.google.common.collect.Lists;
 import com.grtwwh.gameserver.base.thread.BusinessThreadExecutorGroup;
+import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -45,11 +46,17 @@ public class EventBus implements IEventBus {
     }
 
     @Override
-    public void submitSync(Class eventClass, Object... args) {
+    public void submitSync(Class eventClass, IEventCallback eventCallback, Object... args) {
         List<MethodInvokeWrapper> methodInvokeWrappers = event2MethodMap.get(eventClass);
+        if (CollectionUtils.isEmpty(methodInvokeWrappers)) {
+            return;
+        }
         for (MethodInvokeWrapper methodInvokeWrapper : methodInvokeWrappers) {
             try {
-                methodInvokeWrapper.invoke(args);
+                Object returnMsg = methodInvokeWrapper.invoke(args);
+                if (eventCallback != null) {
+                    eventCallback.callback(returnMsg);
+                }
                 //LOGGER.info(String.format("触发[%s]事件成功", methodInvokeWrapper.toString()));
             } catch (Exception e) {
                 LOGGER.error(String.format("触发[%s]事件失败", methodInvokeWrapper.toString()), e);
@@ -58,10 +65,18 @@ public class EventBus implements IEventBus {
     }
 
     @Override
-    public void submit(Class eventClass, int dispatcherCode, Object... args) {
+    public void submit(Class eventClass, IEventCallback eventCallback, int dispatcherCode, Object... args) {
         BusinessThreadExecutorGroup.addTask(dispatcherCode, () -> {
-            submitSync(eventClass, args);
+            submitSync(eventClass, eventCallback, args);
         });
+    }
+
+    public void submitSync(Class eventClass, Object... args) {
+        submitSync(eventClass, null, args);
+    }
+
+    public void submit(Class eventClass, int dispatcherCode, Object... args) {
+        submit(eventClass, null, dispatcherCode, args);
     }
 
 }

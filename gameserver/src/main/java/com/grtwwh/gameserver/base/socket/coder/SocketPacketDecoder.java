@@ -18,13 +18,13 @@ public class SocketPacketDecoder extends ByteToMessageDecoder {
 
     private static final int MAX_LENGTH = 1 * 1024 * 1024;
 
-    private static final int MIN_LENGTH = 5;
+    private static final int MIN_LENGTH = 8;
 
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         // packetId + length + data
-        //     4        1
+        //     4        4
         int readableBytes = in.readableBytes();
         // 超出
         if (readableBytes > MAX_LENGTH) {
@@ -37,7 +37,7 @@ public class SocketPacketDecoder extends ByteToMessageDecoder {
         // 记录协议包的起始位置
         in.markReaderIndex();
         int packetId = in.readInt();
-        byte len = in.readByte();
+        int len = in.readInt();
         if (len < 0) {
             throw new IllegalArgumentException(String.format("数据异常，大小：[%s]", len));
         }
